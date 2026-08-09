@@ -5,7 +5,8 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.ReplyMarkups;  
+using Telegram.Bot.Types.ReplyMarkups;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 public class Worker : BackgroundService
 {
@@ -31,6 +32,7 @@ public class Worker : BackgroundService
 
         async Task OnMessage(Message msg, UpdateType type)
         {
+            _logger.LogInformation($"Message received: {msg.From}: {msg.Text}");
             if (msg.Text == "/start")
             {
                 _logger.LogInformation($"{msg.From} just started!");
@@ -46,15 +48,6 @@ public class Worker : BackgroundService
                 await bot.AnswerCallbackQuery(query.Id, $"You picked {query.Data}");
                 await bot.SendMessage(query.Message!.Chat, $"User {query.From} clicked on {query.Data}");
             }
-        }
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            if (_logger.IsEnabled(LogLevel.Information))
-            {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-            }
-
-            await Task.Delay(1000, stoppingToken);
         }
     }
 }
