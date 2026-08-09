@@ -1,14 +1,59 @@
 namespace MafiaBot;
+using MafiaBot.Options;
+using Microsoft.Extensions.Options;
+using Telegram.Bot;
+using Telegram.Bot.Polling;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
-public class Worker(ILogger<Worker> logger) : BackgroundService
+public class Worker : BackgroundService
 {
+    private readonly TelegramOptions _telegramOptions;
+    private readonly ILogger<Worker> _logger;
+    public Worker(IOptions<TelegramOptions> telegramOptions, ILogger<Worker> logger)
+    {
+        _telegramOptions = telegramOptions.Value;
+        _logger = logger;
+        Console.WriteLine("Hello, World!");
+    }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var bot = new TelegramBotClient(_telegramOptions.Token);
+        var me = await bot.GetMe();
+        bot.OnError += OnError;
+        bot.OnMessage += OnMessage;
+        bot.OnUpdate += OnUpdate;
+        async Task OnError(Exception exception, HandleErrorSource source)
+        {
+            Console.WriteLine(exception); // just dump the exception to the console
+        }
+
+        // method that handle messages received by the bot:
+        async Task OnMessage(Message msg, UpdateType type)
+        {
+            if (msg.Text == "/start")
+            {
+                await bot.SendMessage(msg.Chat, "Welcome! Pick one direction",
+                    replyMarkup: new InlineKeyboardButton[] { "Left", "Right" });
+            }
+        }
+
+        // method that handle other types of updates received by the bot:
+        async Task OnUpdate(Update update)
+        {
+            if (update is { CallbackQuery: { } query }) // non-null CallbackQuery
+            {
+                await bot.AnswerCallbackQuery(query.Id, $"You picked {query.Data}");
+                await bot.SendMessage(query.Message!.Chat, $"User {query.From} clicked on {query.Data}");
+            }
+        }
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (logger.IsEnabled(LogLevel.Information))
+            if (_logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
             }
 
             await Task.Delay(1000, stoppingToken);
