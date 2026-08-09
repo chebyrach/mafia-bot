@@ -5,8 +5,7 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.ReplyMarkups;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using Telegram.Bot.Types.ReplyMarkups;  
 
 public class Worker : BackgroundService
 {
@@ -27,23 +26,22 @@ public class Worker : BackgroundService
         bot.OnUpdate += OnUpdate;
         async Task OnError(Exception exception, HandleErrorSource source)
         {
-            Console.WriteLine(exception); // just dump the exception to the console
+            Console.WriteLine(exception);
         }
 
-        // method that handle messages received by the bot:
         async Task OnMessage(Message msg, UpdateType type)
         {
             if (msg.Text == "/start")
             {
+                _logger.LogInformation($"{msg.From} just started!");
                 await bot.SendMessage(msg.Chat, "Welcome! Pick one direction",
                     replyMarkup: new InlineKeyboardButton[] { "Left", "Right" });
             }
         }
 
-        // method that handle other types of updates received by the bot:
         async Task OnUpdate(Update update)
         {
-            if (update is { CallbackQuery: { } query }) // non-null CallbackQuery
+            if (update is { CallbackQuery: { } query })
             {
                 await bot.AnswerCallbackQuery(query.Id, $"You picked {query.Data}");
                 await bot.SendMessage(query.Message!.Chat, $"User {query.From} clicked on {query.Data}");
