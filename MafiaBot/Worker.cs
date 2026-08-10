@@ -16,12 +16,11 @@ public class Worker : BackgroundService
     {
         _telegramOptions = telegramOptions.Value;
         _logger = logger;
-        Console.WriteLine("Hello, World!");
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var bot = new TelegramBotClient(_telegramOptions.Token);
-        var me = await bot.GetMe();
+        var me = await bot.GetMe(); 
         bot.OnError += OnError;
         bot.OnMessage += OnMessage;
         bot.OnUpdate += OnUpdate;

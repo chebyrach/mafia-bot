@@ -1,5 +1,4 @@
 using MafiaBot.Enums;
-
 namespace MafiaBot.Models;
 
 public class Game
@@ -8,11 +7,13 @@ public class Game
 
     public Game(List<string> players)
     {
+        if (players == null) throw new ArgumentNullException(nameof(players));
+        else if (players.Count < 3 && players.Count > 15) throw new ArgumentOutOfRangeException(nameof(players));
         foreach (var player in players)
         {
             Player newPlayer = new Player(player, Roles.Civilian);
         }
-        this.GiveRoles();
+        GiveRoles();
     }
 
     private void GiveRoles()
