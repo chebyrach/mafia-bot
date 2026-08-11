@@ -37,7 +37,7 @@ public class Player
         IsAlive = false;
     }
 
-    public bool CheckforAlive()
+    public bool CheckForAlive()
     {
         if (IsAlive) return true;
         return false;
@@ -45,6 +45,7 @@ public class Player
     
     public bool Equals(Player? obj)
     {
+        if(obj == null) return false;
         return this.Tag.Equals(obj.Tag);
     }
 }
