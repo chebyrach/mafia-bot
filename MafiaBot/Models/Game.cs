@@ -61,6 +61,26 @@ public class Game
         }
         _players = _players.OrderBy(_ => Random.Shared.Next()).ToList();
     }
+    
+    public List<string> GetAllAlive()
+    {
+        return _players.Where(x => x.CheckForAlive()).Select(x => x.Tag).ToList();
+    }
+
+    public List<string> GetListForMafia()
+    {
+        return _players.Where(x => x.CheckForAlive() && !x.CheckForMafia()).Select(x => x.Tag).ToList();
+    }
+
+    public List<string> GetListForDetective()
+    {
+        return _players.Where(x => x.CheckForAlive() && !x.CheckForDetective()).Select(x => x.Tag).ToList();
+    }
+    
+    public List<string> GetListForDoctor()
+    {
+        return _players.Where(x => x.CheckForAlive() && !x.CheckForDoctor()).Select(x => x.Tag).ToList();
+    }
 
     public List<string>? GetMafia()
     {
@@ -82,7 +102,7 @@ public class Game
     public void MafiaWalks(string targetId)
     {
         var targetObj = _players.First(x => x.Tag == targetId);
-        if(targetObj == null) throw new NullReferenceException();
+        if(targetObj == null) throw new ArgumentException("Data about mafia walk is null", nameof(targetObj));
         _mafiaTarget = targetObj;
     }
  
@@ -90,14 +110,14 @@ public class Game
     public bool DetectiveWalks(string targetId)
     {
         var targetObj = _players.First(x => x.Tag == targetId);
-        if(targetObj == null) throw new NullReferenceException();
+        if(targetObj == null) throw new ArgumentException("Data about detective walk is null", nameof(targetObj));
         return targetObj.CheckForMafia();
     }
     
     public void DoctorWalks(string targetId)
     {
         var targetObj = _players.First(x => x.Tag == targetId);
-        if(targetObj == null) throw new NullReferenceException();
+        if(targetObj == null) throw new ArgumentException("Data about doctor walk is null", nameof(targetObj));
         _doctorTarget = targetObj;
     }
 
