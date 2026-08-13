@@ -81,22 +81,22 @@ public class Game
     public void MafiaWalks(string targetId)
     {
         var targetObj = Players.First(x => x.Tag == targetId);
-        if(targetObj != null) throw new NullReferenceException(); //вместо !=  ==, замени на либо на ArgumentNullException, он только для null, либо на 
-        mafiaTarget = targetObj; // ArgumentException("причина ошибки", nameof(targetObj))
+        if(targetObj == null) throw new ArgumentException("Данные были пустые или null", nameof(targetObj));
+        mafiaTarget = targetObj;
     }
  
 
     public bool DetectiveWalks(string targetId)
     {
         var targetObj = Players.First(x => x.Tag == targetId);
-        if(targetObj != null) throw new NullReferenceException();
+        if (targetObj == null) throw new ArgumentException("Данные были пустые или null", nameof(targetObj));
         return targetObj.CheckForMafia();
     }
     
     public void DoctorWalks(string targetId)
     {
         var targetObj = Players.First(x => x.Tag == targetId);
-        if(targetObj != null) throw new NullReferenceException();
+        if (targetObj == null) throw new ArgumentException("Данные были пустые или null", nameof(targetObj));
         doctorTarget = targetObj;
     }
 
