@@ -81,8 +81,8 @@ public class Game
     public void MafiaWalks(string targetId)
     {
         var targetObj = Players.First(x => x.Tag == targetId);
-        if(targetObj != null) throw new NullReferenceException();
-        mafiaTarget = targetObj;
+        if(targetObj != null) throw new NullReferenceException(); //вместо !=  ==, замени на либо на ArgumentNullException, он только для null, либо на 
+        mafiaTarget = targetObj; // ArgumentException("причина ошибки", nameof(targetObj))
     }
  
 

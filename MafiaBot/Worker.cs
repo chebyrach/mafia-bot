@@ -1,16 +1,12 @@
 namespace MafiaBot;
 
-using MafiaBot.Models;
 using MafiaBot.Options;
 using Microsoft.Extensions.Options;
-using System.Text.RegularExpressions;
 using Telegram.Bot;
-using Telegram.Bot.Extensions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
 public class Worker : BackgroundService
@@ -33,8 +29,7 @@ public class Worker : BackgroundService
 
         async Task OnMessage(Message msg, UpdateType type)
         {
-            if (string.IsNullOrEmpty(msg.Text))
-                return;
+            if (string.IsNullOrEmpty(msg.Text)) throw new ArgumentException("Данные были пустые или null", nameof(msg.Text));
             if (msg.Text.StartsWith($"/start_game @{me.Username}", StringComparison.OrdinalIgnoreCase))
             {
                 long gameId = msg.From.Id;
@@ -42,7 +37,7 @@ public class Worker : BackgroundService
                     new[] { InlineKeyboardButton.WithUrl("", $"https://t.me/{me.Username}?start=game_{gameId}")}
                 });
                 var creatorKeyboard = new InlineKeyboardMarkup(new[] {
-                    new[] { InlineKeyboardButton.WithCallbackData("Начать игру", $"start_game_{gameId}") }
+                    new[] { InlineKeyboardButton.WithCallbackData("Начать игру", $"start_game_{gameId}|chat_{msg.Chat.Id}") }
                 });
 
                 await bot.SendMessage(
@@ -93,16 +88,31 @@ public class Worker : BackgroundService
                 }
             }
         }
-        async Task OnJoinChat(Update update)
+        async Task OnJoinGroupChat(Update update)
+        {
+
+        }
+        async Task OnJoinPrivateChat(Update update)
         {
 
         }
         async Task OnCallBackQuery(CallbackQuery query) {
+            if (string.IsNullOrEmpty(query.Data)) throw new ArgumentException("Данные были пустые или null", nameof(query.Data));
             var data = query.Data;
-            if (data.StartsWith("/start_game_"))
+            if (data.StartsWith("start_game_"))
             {
-                Match match = Regex.Match(data, @"/start_game_\d+");
-                    
+                string gameId = data.Replace("start_game_", "");
+                if (string.IsNullOrEmpty(gameId)) throw new ArgumentException("Данные были пустые или null", nameof(query.Data));
+                string chatId = data.Substring(data.IndexOf('|') + 1, gameId.Length);
+                if (string.IsNullOrEmpty(chatId)) throw new ArgumentException("Данные были пустые или null", nameof(query.Data));
+                await bot.AnswerCallbackQuery(
+                    callbackQueryId: query.Id, 
+                    text: "Игра запускается..."
+                );
+                await bot.SendMessage(
+                    chatId: chatId,
+                    text: $"Игра №{gameId} запускается"
+                );
             }
         }
         async Task OnError(Exception exception, HandleErrorSource source)
