@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace MafiaBot.Options
+﻿namespace MafiaBot.Options
 {
     public class TelegramOptions
     {

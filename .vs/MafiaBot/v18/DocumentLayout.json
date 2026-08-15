@@ -3,20 +3,20 @@
   "WorkspaceRootPath": "C:\\dev\\mafia-bot\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|c:\\dev\\mafia-bot\\mafiabot\\worker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|solutionrelative:mafiabot\\worker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|c:\\dev\\mafia-bot\\mafiabot\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|solutionrelative:mafiabot\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|c:\\dev\\mafia-bot\\mafiabot\\models\\game.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|solutionrelative:mafiabot\\models\\game.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|c:\\dev\\mafia-bot\\mafiabot\\models\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|solutionrelative:mafiabot\\models\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|c:\\dev\\mafia-bot\\mafiabot\\worker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|solutionrelative:mafiabot\\worker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|c:\\dev\\mafia-bot\\mafiabot\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|solutionrelative:mafiabot\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D2E94E18-2025-4133-B39D-69DEA590FA75}|MafiaBot\\MafiaBot.csproj|c:\\dev\\mafia-bot\\mafiabot\\options\\telegramoptions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -30,7 +30,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -42,44 +42,46 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "Worker.cs",
               "DocumentMoniker": "C:\\dev\\mafia-bot\\MafiaBot\\Worker.cs",
               "RelativeDocumentMoniker": "MafiaBot\\Worker.cs",
               "ToolTip": "C:\\dev\\mafia-bot\\MafiaBot\\Worker.cs",
               "RelativeToolTip": "MafiaBot\\Worker.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAGIAAAAJAAAAAAAAAA==",
+              "ViewState": "AgIAABkAAAAAAAAAAAAswB8AAAB8AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-08-09T20:08:45.035Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 1,
               "Title": "Player.cs",
               "DocumentMoniker": "C:\\dev\\mafia-bot\\MafiaBot\\Models\\Player.cs",
               "RelativeDocumentMoniker": "MafiaBot\\Models\\Player.cs",
               "ToolTip": "C:\\dev\\mafia-bot\\MafiaBot\\Models\\Player.cs",
               "RelativeToolTip": "MafiaBot\\Models\\Player.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAATAAAAAAAAAA==",
+              "ViewState": "AgIAAB8AAAAAAAAAAAAwwAYAAAASAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-10T15:22:23.938Z"
+              "WhenOpened": "2026-08-10T15:22:23.938Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "Game.cs",
               "DocumentMoniker": "C:\\dev\\mafia-bot\\MafiaBot\\Models\\Game.cs",
               "RelativeDocumentMoniker": "MafiaBot\\Models\\Game.cs",
               "ToolTip": "C:\\dev\\mafia-bot\\MafiaBot\\Models\\Game.cs",
               "RelativeToolTip": "MafiaBot\\Models\\Game.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAXAAAAAAAAAA==",
+              "ViewState": "AgIAAAgAAAAAAAAAAAAAwA8AAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-10T13:32:15.796Z"
+              "WhenOpened": "2026-08-10T13:32:15.796Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\dev\\mafia-bot\\MafiaBot\\Program.cs",
               "RelativeDocumentMoniker": "MafiaBot\\Program.cs",
@@ -87,7 +89,8 @@
               "RelativeToolTip": "MafiaBot\\Program.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAXAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-09T23:54:56.634Z"
+              "WhenOpened": "2026-08-09T23:54:56.634Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",

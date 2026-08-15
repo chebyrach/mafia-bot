@@ -26,15 +26,18 @@ public class Worker : BackgroundService
         bot.OnError += OnError;
         bot.OnMessage += OnMessage;
         bot.OnUpdate += OnUpdate;
+        
 
         async Task OnMessage(Message msg, UpdateType type)
         {
             if (string.IsNullOrEmpty(msg.Text)) throw new ArgumentException("Данные были пустые или null", nameof(msg.Text));
             if (msg.Text.StartsWith($"/start_game @{me.Username}", StringComparison.OrdinalIgnoreCase))
             {
+                if (msg.From == null) throw new ArgumentException("Данные были пустые или null", nameof(msg.From));
+                players.Add(msg.From.Id.ToString());
                 long gameId = msg.From.Id;
                 var userKeyboard = new InlineKeyboardMarkup(new[] {
-                    new[] { InlineKeyboardButton.WithUrl("", $"https://t.me/{me.Username}?start=game_{gameId}")}
+                    new[] { InlineKeyboardButton.WithCallbackData($"join_game_{gameId}") }
                 });
                 var creatorKeyboard = new InlineKeyboardMarkup(new[] {
                     new[] { InlineKeyboardButton.WithCallbackData("Начать игру", $"start_game_{gameId}|chat_{msg.Chat.Id}") }
@@ -88,23 +91,23 @@ public class Worker : BackgroundService
                 }
             }
         }
-        async Task OnJoinGroupChat(Update update)
-        {
+        //async Task OnJoinGroupChat(Update update)
+        //{
 
-        }
-        async Task OnJoinPrivateChat(Update update)
-        {
+        //}
+        //async Task OnJoinPrivateChat(Update update)
+        //{
 
-        }
+        //}
         async Task OnCallBackQuery(CallbackQuery query) {
             if (string.IsNullOrEmpty(query.Data)) throw new ArgumentException("Данные были пустые или null", nameof(query.Data));
             var data = query.Data;
             if (data.StartsWith("start_game_"))
             {
                 string gameId = data.Replace("start_game_", "");
-                if (string.IsNullOrEmpty(gameId)) throw new ArgumentException("Данные были пустые или null", nameof(query.Data));
+                if (string.IsNullOrEmpty(gameId)) throw new ArgumentException("Данные были пустые или null", nameof(gameId));
                 string chatId = data.Substring(data.IndexOf('|') + 1, gameId.Length);
-                if (string.IsNullOrEmpty(chatId)) throw new ArgumentException("Данные были пустые или null", nameof(query.Data));
+                if (string.IsNullOrEmpty(chatId)) throw new ArgumentException("Данные были пустые или null", nameof(chatId));
                 await bot.AnswerCallbackQuery(
                     callbackQueryId: query.Id, 
                     text: "Игра запускается..."
@@ -113,6 +116,27 @@ public class Worker : BackgroundService
                     chatId: chatId,
                     text: $"Игра №{gameId} запускается"
                 );
+            }
+            else if (data.StartsWith("join_game_"))
+            {
+                string gameId = data.Replace("join_game_", "");
+                if (string.IsNullOrEmpty(gameId)) throw new ArgumentException("Данные были пустые или null", nameof(gameId));
+                if (players.Contains(query.From.Id.ToString()))
+                {
+                    await bot.AnswerCallbackQuery(
+                        callbackQueryId: query.Id,
+                        text: $"Вы уже присоединились к игре №{gameId}"
+                    );
+                    return;
+                }
+                else
+                {
+                    players.Add(query.From.Id.ToString());
+                    await bot.AnswerCallbackQuery(
+                        callbackQueryId: query.Id,
+                        text: $"Вы присоединились к игре №{gameId}"
+                    );
+                }
             }
         }
         async Task OnError(Exception exception, HandleErrorSource source)
