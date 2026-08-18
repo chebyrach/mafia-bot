@@ -4,13 +4,13 @@ namespace MafiaBot.Models;
 
 public class Player
 {
-    public string Tag { get; set; }
+    public long Id { get; set; }
     public Roles Role { get; set; }
     public bool IsAlive { get; set; } = true;
 
-    public Player(string tag, Roles role)
+    public Player(long id, Roles role)
     {
-        Tag = tag;
+        Id = id;
         Role = role;
     }
 
@@ -46,6 +46,6 @@ public class Player
     public bool Equals(Player? obj)
     {
         if(obj == null) return false;
-        return this.Tag.Equals(obj.Tag);
+        return this.Id.Equals(obj.Id);
     }
 }

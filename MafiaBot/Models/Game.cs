@@ -7,7 +7,7 @@ public class Game
     private Player? _doctorTarget;
     private List<Player> _players = new List<Player>();
 
-    public Game(List<string> players)
+    public Game(List<long> players)
     {
         if (_players.Count < 3 && _players.Count > 15) throw new ArgumentOutOfRangeException(nameof(_players));
         foreach (var player in players)
@@ -25,25 +25,25 @@ public class Game
         {
             case 3:
             {
-                _players[0].Role = Roles.Mafia;
+                _players[0].Role = Roles.MafiaBoss;
                 break;
             }
             case >= 4 and <= 5:
             {
-                _players[0].Role = Roles.Mafia;
+                _players[0].Role = Roles.MafiaBoss;
                 _players[1].Role = Roles.Detective;
                 break;
             }
             case >= 6 and <= 7:
             {
-                _players[0].Role = Roles.Mafia;
+                _players[0].Role = Roles.MafiaBoss;
                 _players[1].Role = Roles.Detective;
                 _players[2].Role = Roles.Doctor;
                 break;
             }
             case >= 8 and <= 11:
             {
-                _players[0].Role = Roles.Mafia;
+                _players[0].Role = Roles.MafiaBoss;
                 _players[1].Role = Roles.Detective;
                 _players[2].Role = Roles.Doctor;
                 _players[3].Role = Roles.Mafia;
@@ -51,7 +51,7 @@ public class Game
             }
             case >= 12 and <= 15:
             {
-                _players[0].Role = Roles.Mafia;
+                _players[0].Role = Roles.MafiaBoss;
                 _players[1].Role = Roles.Detective;
                 _players[2].Role = Roles.Doctor;
                 _players[3].Role = Roles.Mafia;
@@ -62,66 +62,66 @@ public class Game
         _players = _players.OrderBy(_ => Random.Shared.Next()).ToList();
     }
     
-    public List<string> GetAllAlive()
+    public List<long> GetAllAlive()
     {
-        return _players.Where(x => x.CheckForAlive()).Select(x => x.Tag).ToList();
+        return _players.Where(x => x.CheckForAlive()).Select(x => x.Id).ToList();
     }
 
-    public List<string> GetListForMafia()
+    public List<long> GetListForMafia()
     {
-        return _players.Where(x => x.CheckForAlive() && !x.CheckForMafia()).Select(x => x.Tag).ToList();
+        return _players.Where(x => x.CheckForAlive() && !x.CheckForMafia()).Select(x => x.Id).ToList();
     }
 
-    public List<string> GetListForDetective()
+    public List<long> GetListForDetective()
     {
-        return _players.Where(x => x.CheckForAlive() && !x.CheckForDetective()).Select(x => x.Tag).ToList();
+        return _players.Where(x => x.CheckForAlive() && !x.CheckForDetective()).Select(x => x.Id).ToList();
     }
     
-    public List<string> GetListForDoctor()
+    public List<long> GetListForDoctor()
     {
-        return _players.Where(x => x.CheckForAlive() && !x.CheckForDoctor()).Select(x => x.Tag).ToList();
+        return _players.Where(x => x.CheckForAlive() && !x.CheckForDoctor()).Select(x => x.Id).ToList();
     }
 
-    public List<string>? GetMafia()
+    public List<long>? GetMafia()
     {
-        var mafia = _players.Where(x => x.CheckForMafia() && x.CheckForAlive()).Select(x => x.Tag).ToList();
+        var mafia = _players.Where(x => x.CheckForMafia() && x.CheckForAlive()).Select(x => x.Id).ToList();
         if(mafia.Count == 0) return null;
         return mafia;
     }
     
-    public string? GetDetective()
+    public long? GetDetective()
     {
-        return _players.FirstOrDefault(x => x.CheckForDetective() && x.CheckForAlive())?.Tag;
+        return _players.FirstOrDefault(x => x.CheckForDetective() && x.CheckForAlive())?.Id;
     }
     
-    public string? GetDoctor()
+    public long? GetDoctor()
     {
-        return _players.FirstOrDefault(x => x.CheckForDoctor() && x.CheckForAlive())?.Tag;
+        return _players.FirstOrDefault(x => x.CheckForDoctor() && x.CheckForAlive())?.Id;
     }
 
-    public void MafiaWalks(string targetId)
+    public void MafiaWalks(long targetId)
     {
-        var targetObj = _players.First(x => x.Tag == targetId);
+        var targetObj = _players.First(x => x.Id == targetId);
         if(targetObj == null) throw new ArgumentException("Data about mafia walk is null", nameof(targetObj));
         _mafiaTarget = targetObj;
     }
  
 
-    public bool DetectiveWalks(string targetId)
+    public bool DetectiveWalks(long targetId)
     {
-        var targetObj = _players.First(x => x.Tag == targetId);
+        var targetObj = _players.First(x => x.Id == targetId);
         if(targetObj == null) throw new ArgumentException("Data about detective walk is null", nameof(targetObj));
         return targetObj.CheckForMafia();
     }
     
-    public void DoctorWalks(string targetId)
+    public void DoctorWalks(long targetId)
     {
-        var targetObj = _players.First(x => x.Tag == targetId);
+        var targetObj = _players.First(x => x.Id == targetId);
         if(targetObj == null) throw new ArgumentException("Data about doctor walk is null", nameof(targetObj));
         _doctorTarget = targetObj;
     }
 
-    public string? CheckRoundResults()
+    public long? CheckRoundResults()
     {
         if(_mafiaTarget == null) throw new NullReferenceException();
         if(_players.FirstOrDefault(x => x.CheckForDoctor() && x.CheckForAlive()) != null)
@@ -132,7 +132,7 @@ public class Game
             }
         }
         _players.First(x => x.Equals(_mafiaTarget)).Kill();
-        return _mafiaTarget.Tag;
+        return _mafiaTarget.Id;
     }
 
     public bool CheckForCivilianWin()
