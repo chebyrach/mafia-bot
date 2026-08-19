@@ -5,6 +5,5 @@ public enum Roles
     Civilian,
     Doctor,
     Detective,
-    Mafia,
-    MafiaBoss
+    Mafia
 }

@@ -25,25 +25,25 @@ public class Game
         {
             case 3:
             {
-                _players[0].Role = Roles.MafiaBoss;
+                _players[0].Role = Roles.Mafia;
                 break;
             }
             case >= 4 and <= 5:
             {
-                _players[0].Role = Roles.MafiaBoss;
+                _players[0].Role = Roles.Mafia;
                 _players[1].Role = Roles.Detective;
                 break;
             }
             case >= 6 and <= 7:
             {
-                _players[0].Role = Roles.MafiaBoss;
+                _players[0].Role = Roles.Mafia;
                 _players[1].Role = Roles.Detective;
                 _players[2].Role = Roles.Doctor;
                 break;
             }
             case >= 8 and <= 11:
             {
-                _players[0].Role = Roles.MafiaBoss;
+                _players[0].Role = Roles.Mafia;
                 _players[1].Role = Roles.Detective;
                 _players[2].Role = Roles.Doctor;
                 _players[3].Role = Roles.Mafia;
@@ -51,7 +51,7 @@ public class Game
             }
             case >= 12 and <= 15:
             {
-                _players[0].Role = Roles.MafiaBoss;
+                _players[0].Role = Roles.Mafia;
                 _players[1].Role = Roles.Detective;
                 _players[2].Role = Roles.Doctor;
                 _players[3].Role = Roles.Mafia;
