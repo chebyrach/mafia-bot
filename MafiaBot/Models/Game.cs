@@ -79,7 +79,7 @@ public class Game
     
     public List<long> GetListForDoctor()
     {
-        return _players.Where(x => x.CheckForAlive() && !x.CheckForDoctor()).Select(x => x.Id).ToList();
+        return _players.Where(x => x.CheckForAlive() && x != _doctorTarget).Select(x => x.Id).ToList();
     }
 
     public List<long>? GetMafia()
