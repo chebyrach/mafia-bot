@@ -121,6 +121,13 @@ public class Game
         _doctorTarget = targetObj;
     }
 
+    public void KickPlayer(long targetId)
+    {
+        var targetObj = _players.First(x => x.Id == targetId);
+        if(targetObj == null) throw new ArgumentException("Data about kicked player is null", nameof(targetObj));
+        targetObj.Kill();
+    }
+
     public long? CheckRoundResults()
     {
         if(_mafiaTarget == null) throw new NullReferenceException();
