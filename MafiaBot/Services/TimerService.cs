@@ -1,14 +1,14 @@
 namespace MafiaBot.Services;
 using System.Timers;
 
-public class TimerService<T>
+public class TimerService
 {
     private readonly Timer _timer = new Timer();
-    private readonly ILogger<TimerService<T>> _logger;
-    public delegate Task<T> OnTimerEndHandler();
+    private readonly ILogger<TimerService> _logger;
+    public delegate Task OnTimerEndHandler();
     private OnTimerEndHandler _callback;
     
-    public TimerService(ILogger<TimerService<T>> logger)
+    public TimerService(ILogger<TimerService> logger)
     {
         _logger = logger;
         _timer.Elapsed += OnTimedEvent;
