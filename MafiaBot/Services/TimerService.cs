@@ -3,39 +3,31 @@ using System.Timers;
 
 public class TimerService
 {
-    private readonly Timer _timer = new Timer();
+    private TaskCompletionSource<long?> _completionSource = new ();
     private readonly ILogger<TimerService> _logger;
-    public delegate Task OnTimerEndHandler();
-    private OnTimerEndHandler _callback;
     
     public TimerService(ILogger<TimerService> logger)
     {
         _logger = logger;
-        _timer.Elapsed += OnTimedEvent;
     }
 
-    public void StartTimer(OnTimerEndHandler callback, int time)
+    public async Task<long?> StartTimer(TimeSpan timeout)
     {
-        _timer.Stop();
-        _timer.Interval = time*1000;
-        _callback = callback;
-        _timer.Start();
+        _logger.LogInformation($"Timer started for {timeout} seconds");
+        _completionSource = new TaskCompletionSource<long?>(TaskCreationOptions.RunContinuationsAsynchronously);
         
-        _logger.LogInformation($"Timer started for {time} seconds");
+        using var cts = new CancellationTokenSource(timeout);
+
+        using (cts.Token.Register(() => _completionSource.TrySetResult(null)))
+        {
+            return await _completionSource.Task;
+        }
     }
 
-    public void StopTimer()
+    public void StopTimer(long choice)
     {
-        _timer.Stop();
-        
         _logger.LogInformation($"Timer stopped");
+        _completionSource.TrySetResult(choice);
     }
     
-    private void OnTimedEvent(object source, ElapsedEventArgs e)
-    {
-        _timer.Stop();
-        _callback.Invoke();
-        
-        _logger.LogInformation($"Timer ended for {_timer.Interval/1000} seconds");
-    }
 }
