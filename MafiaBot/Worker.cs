@@ -2,33 +2,31 @@ namespace MafiaBot;
 
 using MafiaBot.Options;
 using Microsoft.Extensions.Options;
-using Models;
-using System.Runtime.InteropServices;
-using System.Xml;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
-public class Worker : BackgroundService
+public class Worker : BackgroundService 
 {
     private readonly TelegramOptions _telegramOptions;
     private readonly ILogger<Worker> _logger;
-    public Worker(IOptions<TelegramOptions> telegramOptions, ILogger<Worker> logger)
+    private readonly Services.TimerService _timerService;
+    public Worker(IOptions<TelegramOptions> telegramOptions, ILogger<Worker> logger, Services.TimerService timer)
     {
         _telegramOptions = telegramOptions.Value;
         _logger = logger;
+        _timerService = timer;
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var bot = new TelegramBotClient(_telegramOptions.Token);
-        var me = await bot.GetMe();
+        var me = await bot.GetMe(cancellationToken: stoppingToken);
         var players = new List<User>();
         var pollPlayers = new List<long>();
         var pollResult = new Dictionary<long, int>();
-        var game = new Models.Game(players.Select(x => x.Id).ToList());
-        var gamePlayers = new List<Player>();
+        Models.Game game = new([1, 1, 1]);
         bot.OnError += OnError;
         bot.OnMessage += OnMessage;
         bot.OnUpdate += OnUpdate;
@@ -36,7 +34,7 @@ public class Worker : BackgroundService
 
         async Task OnMessage(Message msg, UpdateType type)
         {
-            if (string.IsNullOrEmpty(msg.Text)) throw new ArgumentException("Данные были пустые или null", nameof(msg.Text));
+            if (string.IsNullOrEmpty(msg.Text)) return;
             if (msg.Text.StartsWith($"/start_game @{me.Username}", StringComparison.OrdinalIgnoreCase))
             {
                 if (msg.From == null) throw new ArgumentException("Данные были пустые или null", nameof(msg.From));
@@ -48,16 +46,15 @@ public class Worker : BackgroundService
                 var creatorKeyboard = new InlineKeyboardMarkup(new[] {
                     new[] { InlineKeyboardButton.WithCallbackData("Начать игру", $"start_game_{gameId}|chat_{msg.Chat.Id}") }
                 });
-
-                await bot.SendMessage(
-                    chatId: msg.Chat.Id,
-                    text: $"Присоединиться",
-                    replyMarkup: userKeyboard,
-                    cancellationToken: default
-                );
-
                 try
                 {
+                    await bot.SendMessage(
+                        chatId: msg.Chat.Id,
+                        text: $"Присоединиться",
+                        replyMarkup: userKeyboard,
+                        cancellationToken: default
+                    );
+
                     await bot.SendMessage(
                         chatId: gameId,
                         text: "Нажмите, когда все присоединятся для запуска игры",
@@ -114,11 +111,19 @@ public class Worker : BackgroundService
             var user = query.From;
             if (data.StartsWith("start_game_"))
             {
-                string gameId = data.Replace("start_game_", "");
-                if (string.IsNullOrEmpty(gameId)) throw new ArgumentException("Данные были пустые или null", nameof(gameId));
-                string chatId = data.Substring(data.IndexOf('|') + 1, gameId.Length);
-                if (string.IsNullOrEmpty(chatId)) throw new ArgumentException("Данные были пустые или null", nameof(chatId));
-                await bot.AnswerCallbackQuery(
+                if (string.IsNullOrEmpty(data)) throw new ArgumentException("Входные данные пустые или null", nameof(data));
+                string cleanData = data.Replace("start_game_", "");
+                string[] parts = cleanData.Split('|');
+                if (parts.Length < 2 || string.IsNullOrEmpty(parts[0]) || string.IsNullOrEmpty(parts[1]))
+                {
+                    throw new ArgumentException("Данные имеют неверный формат. Ожидалось: start_game_gameId|chatId");
+                }
+
+                string gameId = parts[0];
+                string chatId = parts[1].Replace("chat_", "");
+
+                try {                
+                    await bot.AnswerCallbackQuery(
                     callbackQueryId: query.Id,
                     text: "Игра запускается...",
                     cancellationToken: default
@@ -128,6 +133,13 @@ public class Worker : BackgroundService
                     text: $"Игра №{gameId} запускается",
                     cancellationToken: default
                 );
+                game = new Models.Game(players.Select(x => x.Id).ToList());
+                    await GameStart(chatId); 
+                }
+                catch
+                {
+                    _logger.LogInformation("");
+                }
             }
             else if (data.StartsWith("join_game_"))
             {
@@ -166,7 +178,13 @@ public class Worker : BackgroundService
                     pollPlayers.Add(user.Id);
                     _ = long.TryParse(data.Replace("kick_", ""), out long targetId);
                     if (pollResult.TryGetValue(targetId, out int currentVotes))
+                    {
+                        if (currentVotes == players.Count)
+                        {
+                            game.KickPlayer(targetId);
+                        }
                         pollResult[targetId] = currentVotes + 1;
+                    }
                     else
                         pollResult.Add(targetId, 1);
                     await bot.AnswerCallbackQuery(
@@ -214,7 +232,13 @@ public class Worker : BackgroundService
                 pollPlayers.Add(user.Id);
                 _ = long.TryParse(data.Replace("kill_", ""), out long targetId);
                 if (pollResult.TryGetValue(targetId, out int currentVotes))
+                {
+                    if (currentVotes == players.Count)
+                    {
+                        game.MafiaWalks(targetId);
+                    }
                     pollResult[targetId] = currentVotes + 1;
+                }
                 else
                     pollResult.Add(targetId, 1);
                 await bot.AnswerCallbackQuery(
@@ -235,13 +259,13 @@ public class Worker : BackgroundService
         {
             _logger.LogInformation($"Exception: {exception}, source: {source}");
         }
-        async Task GameStart()
+        async Task GameStart(string chatId)
         {
             var civillianButtons = new List<InlineKeyboardButton>();
             var doctorButtons = new List<InlineKeyboardButton>();
             var detectiveButtons = new List<InlineKeyboardButton>();
             var mafiaButtons = new List<InlineKeyboardButton>();
-            var roundNumber = 1;
+            var roundNumber = 0;
             while (!game.CheckForCivilianWin() && !game.CheckForMafiaWin())
             {
                 foreach (var player in players)
@@ -256,36 +280,121 @@ public class Worker : BackgroundService
                 var doctorKeyboard = new InlineKeyboardMarkup(civillianButtons);
                 var detectiveKeyboard = new InlineKeyboardMarkup(civillianButtons);
                 var mafiaKeyboard = new InlineKeyboardMarkup(civillianButtons);
-                if (roundNumber == 1)
+                if (roundNumber == 0)
                 {
+                    await bot.SendMessage(
+                        chatId: chatId,
+                        text: "Наступает ознакомительная ночь, перейдите в чат с ботом",
+                        cancellationToken: default
+                    );
+                    if (game.GetDetective() is long detectiveId)
+                    {
+                        await bot.SendMessage(
+                        chatId: detectiveId,
+                        text: "Вы детектив",
+                        cancellationToken: default
+                        );
+                    }
+                    if (game.GetMafia() is List<long> mafia)
+                    {
+                        foreach (var killer in mafia)
+                        {
+                            var teammatesId = mafia.Where(x => x != killer);
+                            var teammatesUsernames = teammatesId
+                              .Select(id => players.FirstOrDefault(x => x.Id == id)?.Username)
+                              .Where(username => username != null);
+                            string team = string.Join(", @", teammatesUsernames);
+                            await bot.SendMessage(
+                                chatId: killer,
+                                text: string.IsNullOrEmpty(team) ? "Вы мафия" : $"Вы мафия. Ваши напарники {team}",
+                                cancellationToken: default
+                            );
+                        }
+                    }
+                    if (game.GetDoctor() is long doctorId)
+                    {
+                        await bot.SendMessage(
+                        chatId: doctorId,
+                        text: "Вы доктор",
+                        cancellationToken: default
+                    );
+                    }
+                    _timerService.StartTimer(async () => await bot.SendMessage(
+                        chatId: chatId,
+                        text: "Наступил день",
+                        cancellationToken: default), 15);
+                    roundNumber++;
                 }
                 else
                 {
-                    await bot.SendMessage(
-                        chatId: 1,
-                        text: "Выгнать игрока",
-                        replyMarkup: civillianKeyboard,
-                        cancellationToken: default
-                    );
-                    await bot.SendMessage(
-                        chatId: 1,
-                        text: "",
-                        cancellationToken: default
-                    );
-                    await bot.SendMessage(
-                        chatId: game.GetDetective(),
-                        text: "",
-                        replyMarkup: detectiveKeyboard,
-                        cancellationToken: default
-                    );
-                    roundNumber++;
-                }
-            }
+                    if (roundNumber < 2)
+                    {
+                        await bot.SendMessage(
+                            chatId: chatId,
+                            text: "Выгнать игрока",
+                            replyMarkup: civillianKeyboard,
+                            cancellationToken: default
+                        );
+                    }
+                    _timerService.StartTimer(async () => await bot.SendMessage(
+                        chatId: chatId,
+                        text: "Наступает ночь, перейдите в чат с ботом",
+                        cancellationToken: default), 240);
 
-        }
-        async Task GameTimer(Timer time, Task task)
-        {
-            
+                    if (game.GetDetective() is long detectiveId)
+                    {
+                        _timerService.StartTimer(async () => await bot.SendMessage(
+                            chatId: detectiveId,
+                            text: "Проверить",
+                            replyMarkup: detectiveKeyboard,
+                            cancellationToken: default), 15);
+                    }
+                    if (game.GetMafia() is List<long> mafia)
+                    {
+                        foreach (var killer in mafia)
+                        {
+                            _timerService.StartTimer(async () => await bot.SendMessage(
+                                chatId: killer,
+                                text: "Убить",
+                                replyMarkup: mafiaKeyboard,
+                                cancellationToken: default), 15);
+                        }
+                    }
+                    if (game.GetDoctor() is long doctorId)
+                    {
+                        _timerService.StartTimer(async () => await bot.SendMessage(
+                            chatId: doctorId,
+                            text: "Вылечить",
+                            replyMarkup: doctorKeyboard,
+                            cancellationToken: default), 15);
+                    }
+                    roundNumber++;
+                    await bot.SendMessage(
+                        chatId: chatId,
+                        text: "Наступил день",
+                        cancellationToken: default
+                    );
+                    await Task.Delay(15000, default);
+                }
+                if (roundNumber != 1)
+                {
+                    if (game.CheckRoundResults() is long killedPlayer)
+                    {
+#pragma warning disable CS8602
+                        await bot.SendMessage(
+                            chatId: chatId,
+                            text: $"@{players.FirstOrDefault(x => x.Id.Equals(killedPlayer)).Username} был убит",
+                            cancellationToken: default
+                        );
+#pragma warning restore CS8602
+                        players.RemoveAll(x => x.Id.Equals(killedPlayer));
+                    }
+                }
+                        detectiveButtons.Clear();
+                        mafiaButtons.Clear();
+                        civillianButtons.Clear();
+                        doctorButtons.Clear();
+            }
         }
     }
 }

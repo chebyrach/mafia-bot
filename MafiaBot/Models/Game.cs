@@ -8,7 +8,7 @@ public class Game
     private List<Player> _players = new List<Player>();
 
     public Game(List<long> players)
-    {
+    {   
         if (_players.Count < 3 && _players.Count > 15) throw new ArgumentOutOfRangeException(nameof(_players));
         foreach (var player in players)
         {
