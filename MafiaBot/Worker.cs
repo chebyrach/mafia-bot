@@ -2,6 +2,8 @@ namespace MafiaBot;
 
 using MafiaBot.Options;
 using Microsoft.Extensions.Options;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -25,7 +27,7 @@ public class Worker : BackgroundService
         var me = await bot.GetMe(cancellationToken: stoppingToken);
         var players = new List<User>();
         var pollPlayers = new List<long>();
-        var pollResult = new Dictionary<long, int>();
+        var pollSelection = new Dictionary<long, int>();
         Models.Game game = new([1, 1, 1]);
         bot.OnError += OnError;
         bot.OnMessage += OnMessage;
@@ -41,7 +43,7 @@ public class Worker : BackgroundService
                 players.Add(msg.From);
                 long gameId = msg.From.Id;
                 var userKeyboard = new InlineKeyboardMarkup(new[] {
-                    new[] { InlineKeyboardButton.WithCallbackData($"join_game_{gameId}") }
+                    new[] { InlineKeyboardButton.WithCallbackData("Присоединиться", $"join_game_{gameId}") }
                 });
                 var creatorKeyboard = new InlineKeyboardMarkup(new[] {
                     new[] { InlineKeyboardButton.WithCallbackData("Начать игру", $"start_game_{gameId}|chat_{msg.Chat.Id}") }
@@ -50,7 +52,7 @@ public class Worker : BackgroundService
                 {
                     await bot.SendMessage(
                         chatId: msg.Chat.Id,
-                        text: $"Присоединиться",
+                        text: $"Игра №{gameId}",
                         replyMarkup: userKeyboard,
                         cancellationToken: default
                     );
@@ -111,18 +113,43 @@ public class Worker : BackgroundService
             var user = query.From;
             if (data.StartsWith("start_game_"))
             {
+                if (players.Count < 3)
+                {
+                    try
+                    {
+                        await bot.AnswerCallbackQuery(
+                        callbackQueryId: query.Id,
+                        text: "Мало игроков",
+                        cancellationToken: default
+                        );
+                    }
+                    catch { return; }
+                }
+                else if (players.Count > 15)
+                {
+                    try
+                    {
+                        await bot.AnswerCallbackQuery(
+                        callbackQueryId: query.Id,
+                        text: "Много игроков",
+                        cancellationToken: default
+                        );
+                    }
+                    catch { return; }
+                }
+
                 if (string.IsNullOrEmpty(data)) throw new ArgumentException("Входные данные пустые или null", nameof(data));
                 string cleanData = data.Replace("start_game_", "");
                 string[] parts = cleanData.Split('|');
                 if (parts.Length < 2 || string.IsNullOrEmpty(parts[0]) || string.IsNullOrEmpty(parts[1]))
                 {
-                    throw new ArgumentException("Данные имеют неверный формат. Ожидалось: start_game_gameId|chatId");
+                    throw new ArgumentException("Неверные данные. Ожидалось: start_game_gameId|chatId");
                 }
 
                 string gameId = parts[0];
                 string chatId = parts[1].Replace("chat_", "");
 
-                try {                
+                try {     
                     await bot.AnswerCallbackQuery(
                     callbackQueryId: query.Id,
                     text: "Игра запускается...",
@@ -136,16 +163,13 @@ public class Worker : BackgroundService
                 game = new Models.Game(players.Select(x => x.Id).ToList());
                     await GameStart(chatId); 
                 }
-                catch
-                {
-                    _logger.LogInformation("");
-                }
+                catch{ return; }
             }
             else if (data.StartsWith("join_game_"))
             {
                 string gameId = data.Replace("join_game_", "");
                 if (string.IsNullOrEmpty(gameId)) throw new ArgumentException("Данные были пустые или null", nameof(gameId));
-                if (players.Contains(user))
+                if (players.Any(p => p.Id == user.Id))
                 {
                     await bot.AnswerCallbackQuery(
                         callbackQueryId: query.Id,
@@ -177,16 +201,17 @@ public class Worker : BackgroundService
                 {
                     pollPlayers.Add(user.Id);
                     _ = long.TryParse(data.Replace("kick_", ""), out long targetId);
-                    if (pollResult.TryGetValue(targetId, out int currentVotes))
+                    if (pollSelection.TryGetValue(targetId, out int currentVotes))
                     {
                         if (currentVotes == players.Count)
                         {
                             game.KickPlayer(targetId);
+                            _timerService.StopTimer(targetId);
                         }
-                        pollResult[targetId] = currentVotes + 1;
+                        pollSelection[targetId] = currentVotes + 1;
                     }
                     else
-                        pollResult.Add(targetId, 1);
+                        pollSelection.Add(targetId, 1);
                     await bot.AnswerCallbackQuery(
                         callbackQueryId: query.Id,
                         text: $"Вы проголосовали",
@@ -198,6 +223,7 @@ public class Worker : BackgroundService
             {
                 _ = long.TryParse(data.Replace("heal_", ""), out long targetId);
                 game.DoctorWalks(targetId:  targetId);
+                _timerService.StopTimer(targetId);
                 await bot.AnswerCallbackQuery(
                     callbackQueryId: query.Id,
                     text: $"Вы вылечили игрока",
@@ -214,6 +240,8 @@ public class Worker : BackgroundService
             else if (data.StartsWith("check_"))
             {
                 _ = long.TryParse(data.Replace("check_", ""), out long targetId);
+                game.DetectiveWalks(targetId);
+                _timerService.StopTimer(targetId);
                 await bot.SendMessage(
                     chatId: user.Id,
                     text: game.DetectiveWalks(targetId: targetId) ? "Игрок - мафия" : "Игрок -  мирный",
@@ -231,16 +259,17 @@ public class Worker : BackgroundService
             {
                 pollPlayers.Add(user.Id);
                 _ = long.TryParse(data.Replace("kill_", ""), out long targetId);
-                if (pollResult.TryGetValue(targetId, out int currentVotes))
+                if (pollSelection.TryGetValue(targetId, out int currentVotes))
                 {
                     if (currentVotes == players.Count)
                     {
                         game.MafiaWalks(targetId);
+                        _timerService.StopTimer(targetId);
                     }
-                    pollResult[targetId] = currentVotes + 1;
+                    pollSelection[targetId] = currentVotes + 1;
                 }
                 else
-                    pollResult.Add(targetId, 1);
+                    pollSelection.Add(targetId, 1);
                 await bot.AnswerCallbackQuery(
                     callbackQueryId: query.Id,
                     text: $"Вы проголосовали",
@@ -261,6 +290,7 @@ public class Worker : BackgroundService
         }
         async Task GameStart(string chatId)
         {
+            long? v;
             var civillianButtons = new List<InlineKeyboardButton>();
             var doctorButtons = new List<InlineKeyboardButton>();
             var detectiveButtons = new List<InlineKeyboardButton>();
@@ -273,7 +303,8 @@ public class Worker : BackgroundService
                     civillianButtons.Add(InlineKeyboardButton.WithCallbackData($"{player.Username}", $"kick_{player.Id}"));
                     if (game.GetListForDoctor().Contains(player.Id))
                         doctorButtons.Add(InlineKeyboardButton.WithCallbackData($"{player.Username}", $"heal_{player.Id}"));
-                    detectiveButtons.Add(InlineKeyboardButton.WithCallbackData($"{player.Username}", $"check_{player.Id}"));
+                    if (game.GetListForDetective().Contains(player.Id))
+                        detectiveButtons.Add(InlineKeyboardButton.WithCallbackData($"{player.Username}", $"check_{player.Id}"));
                     mafiaButtons.Add(InlineKeyboardButton.WithCallbackData($"{player.Username}", $"kill_{player.Id}"));
                 }
                 var civillianKeyboard = new InlineKeyboardMarkup(civillianButtons);
@@ -295,6 +326,14 @@ public class Worker : BackgroundService
                         cancellationToken: default
                         );
                     }
+                    if (game.GetDoctor() is long doctorId)
+                    {
+                        await bot.SendMessage(
+                        chatId: doctorId,
+                        text: "Вы доктор",
+                        cancellationToken: default
+                    );
+                    }
                     if (game.GetMafia() is List<long> mafia)
                     {
                         foreach (var killer in mafia)
@@ -311,18 +350,23 @@ public class Worker : BackgroundService
                             );
                         }
                     }
-                    if (game.GetDoctor() is long doctorId)
+                    if (game.GetCivilians() is List<long> civilians)
                     {
-                        await bot.SendMessage(
-                        chatId: doctorId,
-                        text: "Вы доктор",
-                        cancellationToken: default
-                    );
+                        foreach (var civillian in civilians)
+                        {
+                            await bot.SendMessage(
+                                chatId: civillian,
+                                text: "Вы мирный житель",
+                                cancellationToken: default
+                            );
+                        }
                     }
-                    _timerService.StartTimer(async () => await bot.SendMessage(
+                    await bot.SendMessage(
                         chatId: chatId,
                         text: "Наступил день",
-                        cancellationToken: default), 15);
+                        cancellationToken: default
+                    );
+                    await _timerService.StartTimer(TimeSpan.FromSeconds(15));
                     roundNumber++;
                 }
                 else
@@ -335,38 +379,53 @@ public class Worker : BackgroundService
                             replyMarkup: civillianKeyboard,
                             cancellationToken: default
                         );
+                     game.KickPlayer(calcPollResults(await _timerService.StartTimer(TimeSpan.FromSeconds(240) ) ) );
+
                     }
-                    _timerService.StartTimer(async () => await bot.SendMessage(
+                    await bot.SendMessage(
                         chatId: chatId,
                         text: "Наступает ночь, перейдите в чат с ботом",
-                        cancellationToken: default), 240);
+                        cancellationToken: default
+                    );
 
                     if (game.GetDetective() is long detectiveId)
                     {
-                        _timerService.StartTimer(async () => await bot.SendMessage(
+                        await bot.SendMessage(
                             chatId: detectiveId,
                             text: "Проверить",
                             replyMarkup: detectiveKeyboard,
-                            cancellationToken: default), 15);
+                            cancellationToken: default
+                        );
+                        if (await _timerService.StartTimer(TimeSpan.FromSeconds(15)) == null)
+                        {
+                            game.DetectiveWalks(players.FirstOrDefault().Id);
+                        }
                     }
                     if (game.GetMafia() is List<long> mafia)
                     {
                         foreach (var killer in mafia)
                         {
-                            _timerService.StartTimer(async () => await bot.SendMessage(
+                            await bot.SendMessage(
                                 chatId: killer,
                                 text: "Убить",
                                 replyMarkup: mafiaKeyboard,
-                                cancellationToken: default), 15);
+                                cancellationToken: default
+                            );
                         }
+                        game.MafiaWalks(calcPollResults(await _timerService.StartTimer(TimeSpan.FromSeconds(240))));
                     }
                     if (game.GetDoctor() is long doctorId)
                     {
-                        _timerService.StartTimer(async () => await bot.SendMessage(
+                        await bot.SendMessage(
                             chatId: doctorId,
                             text: "Вылечить",
                             replyMarkup: doctorKeyboard,
-                            cancellationToken: default), 15);
+                            cancellationToken: default
+                        );
+                        if ( await _timerService.StartTimer(TimeSpan.FromSeconds(15)) == null )
+                        {
+                            game.DoctorWalks(players.FirstOrDefault().Id);
+                        }
                     }
                     roundNumber++;
                     await bot.SendMessage(
@@ -374,7 +433,7 @@ public class Worker : BackgroundService
                         text: "Наступил день",
                         cancellationToken: default
                     );
-                    await Task.Delay(15000, default);
+                    await Task.Delay(10000, default);
                 }
                 if (roundNumber != 1)
                 {
@@ -390,11 +449,45 @@ public class Worker : BackgroundService
                         players.RemoveAll(x => x.Id.Equals(killedPlayer));
                     }
                 }
-                        detectiveButtons.Clear();
-                        mafiaButtons.Clear();
-                        civillianButtons.Clear();
-                        doctorButtons.Clear();
+                detectiveButtons.Clear();
+                mafiaButtons.Clear();
+                civillianButtons.Clear();
+                doctorButtons.Clear();
             }
         }
+        long calcPollResults(long? @targetId)
+        {
+            long pollResult = 0;
+            if (pollSelection.Count != 0)
+            {
+                int result = 0;
+                foreach (var player in pollSelection)
+                {
+                    if (result == 0)
+                        result = player.Value;
+                    else
+                    {
+                        result = player.Value > result ? player.Value : result;
+                        pollResult = player.Key;
+                    }
+                }
+            }
+            if (pollResult == 0)
+            {
+#pragma warning disable CS8602
+
+                pollPlayers.Clear();
+                pollSelection.Clear();
+                return players.FirstOrDefault().Id;
+
+#pragma warning restore CS8602
+            }
+            else
+            {
+                pollPlayers.Clear();
+                pollSelection.Clear();
+                return pollResult;
+            }
+        } 
     }
 }
