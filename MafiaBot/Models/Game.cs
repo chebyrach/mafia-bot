@@ -9,7 +9,7 @@ public class Game
 
     public Game(List<long> players)
     {   
-        if (_players.Count < 3 && _players.Count > 15) throw new ArgumentOutOfRangeException(nameof(_players));
+        if (players.Count < 3 && players.Count > 15) throw new ArgumentOutOfRangeException(nameof(players));
         foreach (var player in players)
         {
             Player newPlayer = new Player(player, Roles.Civilian);
@@ -99,6 +99,13 @@ public class Game
         return _players.FirstOrDefault(x => x.CheckForDoctor() && x.CheckForAlive())?.Id;
     }
 
+    public List<long>? GetCivilians()
+    {
+        var civilians = _players.Where(x => x.CheckForCivilian() && x.CheckForAlive()).Select(x => x.Id).ToList();
+        if(civilians.Count == 0) return null;
+        return civilians;
+    }
+
     public void MafiaWalks(long targetId)
     {
         var targetObj = _players.First(x => x.Id == targetId);
@@ -130,7 +137,7 @@ public class Game
 
     public long? CheckRoundResults()
     {
-        if(_mafiaTarget == null) throw new NullReferenceException();
+        if (_mafiaTarget == null) throw new ArgumentException();
         if(_players.FirstOrDefault(x => x.CheckForDoctor() && x.CheckForAlive()) != null)
         {
             if (_mafiaTarget.Equals(_doctorTarget))

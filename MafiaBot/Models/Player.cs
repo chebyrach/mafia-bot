@@ -32,6 +32,12 @@ public class Player
         return false;
     }
     
+    public bool CheckForCivilian()
+    {
+        if (this.Role == Roles.Civilian) return true;
+        return false;
+    }
+    
     public void Kill()
     {
         IsAlive = false;
