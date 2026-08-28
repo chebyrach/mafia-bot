@@ -108,6 +108,7 @@ public class Worker : BackgroundService
 
         //}
         async Task OnCallBackQuery(CallbackQuery query) {
+            _logger.LogInformation($"{query.From.ToString()}, {query.Message}, {query.Data}");
             if (string.IsNullOrEmpty(query.Data)) throw new ArgumentException("Данные были пустые или null", nameof(query.Data));
             var data = query.Data;
             var user = query.From;
@@ -115,27 +116,22 @@ public class Worker : BackgroundService
             {
                 if (players.Count < 3)
                 {
-                    try
-                    {
-                        await bot.AnswerCallbackQuery(
+                    await bot.AnswerCallbackQuery(
                         callbackQueryId: query.Id,
                         text: "Мало игроков",
                         cancellationToken: default
-                        );
-                    }
-                    catch { return; }
+                    ); 
+                    return;
                 }
                 else if (players.Count > 15)
                 {
-                    try
-                    {
-                        await bot.AnswerCallbackQuery(
+
+                    await bot.AnswerCallbackQuery(
                         callbackQueryId: query.Id,
                         text: "Много игроков",
                         cancellationToken: default
-                        );
-                    }
-                    catch { return; }
+                    );
+                    return;
                 }
 
                 if (string.IsNullOrEmpty(data)) throw new ArgumentException("Входные данные пустые или null", nameof(data));
@@ -288,9 +284,26 @@ public class Worker : BackgroundService
         {
             _logger.LogInformation($"Exception: {exception}, source: {source}");
         }
+        async Task<Message> SendMessage(ChatId chatId, string text)
+        {
+            return await bot.SendMessage(
+                chatId: chatId,
+                text: text,
+                cancellationToken: default
+                );
+        }
+        async Task<Message> SendMessageWithKeyboard(ChatId chatId, string text, ReplyMarkup inlineKeyboard)
+        {
+            return await bot.SendMessage(
+                chatId: chatId,
+                text: text,
+                replyMarkup: inlineKeyboard,
+                cancellationToken: default
+                );
+        }
+
         async Task GameStart(string chatId)
         {
-            long? v;
             var civillianButtons = new List<InlineKeyboardButton>();
             var doctorButtons = new List<InlineKeyboardButton>();
             var detectiveButtons = new List<InlineKeyboardButton>();
@@ -371,7 +384,7 @@ public class Worker : BackgroundService
                 }
                 else
                 {
-                    if (roundNumber < 2)
+                    if (roundNumber > 2)
                     {
                         await bot.SendMessage(
                             chatId: chatId,
@@ -379,15 +392,15 @@ public class Worker : BackgroundService
                             replyMarkup: civillianKeyboard,
                             cancellationToken: default
                         );
-                     game.KickPlayer(calcPollResults(await _timerService.StartTimer(TimeSpan.FromSeconds(240) ) ) );
+                     game.KickPlayer(calcPollResults(await _timerService.StartTimer(TimeSpan.FromSeconds(10) ) ) );
 
                     }
-                    await bot.SendMessage(
+                     await bot.SendMessage(
                         chatId: chatId,
                         text: "Наступает ночь, перейдите в чат с ботом",
                         cancellationToken: default
                     );
-
+                    await Task.Delay(1000);
                     if (game.GetDetective() is long detectiveId)
                     {
                         await bot.SendMessage(
@@ -396,11 +409,13 @@ public class Worker : BackgroundService
                             replyMarkup: detectiveKeyboard,
                             cancellationToken: default
                         );
-                        if (await _timerService.StartTimer(TimeSpan.FromSeconds(15)) == null)
+                        if (await _timerService.StartTimer(TimeSpan.FromSeconds(10)) == null)
                         {
                             game.DetectiveWalks(players.FirstOrDefault().Id);
                         }
                     }
+                    await Task.Delay(1000);
+
                     if (game.GetMafia() is List<long> mafia)
                     {
                         foreach (var killer in mafia)
@@ -412,8 +427,10 @@ public class Worker : BackgroundService
                                 cancellationToken: default
                             );
                         }
-                        game.MafiaWalks(calcPollResults(await _timerService.StartTimer(TimeSpan.FromSeconds(240))));
+                        game.MafiaWalks(calcPollResults(await _timerService.StartTimer(TimeSpan.FromSeconds(10))));
                     }
+                    await Task.Delay(1000);
+
                     if (game.GetDoctor() is long doctorId)
                     {
                         await bot.SendMessage(
