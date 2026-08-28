@@ -157,7 +157,17 @@ public class Worker : BackgroundService
                     cancellationToken: default
                 );
                 game = new Models.Game(players.Select(x => x.Id).ToList());
-                    await GameStart(chatId); 
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await GameStart(chatId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Ошибка в игровом цикле");
+                    }
+                });
                 }
                 catch{ return; }
             }
@@ -321,9 +331,9 @@ public class Worker : BackgroundService
                     mafiaButtons.Add(InlineKeyboardButton.WithCallbackData($"{player.Username}", $"kill_{player.Id}"));
                 }
                 var civillianKeyboard = new InlineKeyboardMarkup(civillianButtons);
-                var doctorKeyboard = new InlineKeyboardMarkup(civillianButtons);
-                var detectiveKeyboard = new InlineKeyboardMarkup(civillianButtons);
-                var mafiaKeyboard = new InlineKeyboardMarkup(civillianButtons);
+                var doctorKeyboard = new InlineKeyboardMarkup(doctorButtons);
+                var detectiveKeyboard = new InlineKeyboardMarkup(detectiveButtons);
+                var mafiaKeyboard = new InlineKeyboardMarkup(mafiaButtons);
                 if (roundNumber == 0)
                 {
                     await bot.SendMessage(
