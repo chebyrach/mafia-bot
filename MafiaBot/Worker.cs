@@ -30,11 +30,10 @@ public class Worker : BackgroundService
         var pollSelection = new Dictionary<long, int>();
         Models.Game game = new([1, 1, 1]);
         bot.OnError += OnError;
-        bot.OnMessage += OnMessage;
         bot.OnUpdate += OnUpdate;
         
 
-        async Task OnMessage(Message msg, UpdateType type)
+        async Task OnMessage(Message msg)
         {
             if (string.IsNullOrEmpty(msg.Text)) return;
             if (msg.Text.StartsWith($"/start_game @{me.Username}", StringComparison.OrdinalIgnoreCase))
@@ -82,23 +81,31 @@ public class Worker : BackgroundService
         }
 
         async Task OnUpdate(Update update)
-        {   
-            switch (update.Type)
+        {
+            // Запускаем каждый апдейт в ThreadPool, чтобы полинг мгновенно брал следующий
+            _ = Task.Run(async () =>
             {
-                case UpdateType.Message:
+                try
                 {
-                    if (update.Message != null)
-                        await OnMessage(update.Message, UpdateType.Message);
-                    break;
+                    switch (update.Type)
+                    {
+                        case UpdateType.Message when update.Message != null:
+                            await OnMessage(update.Message);
+                            break;
+
+                        case UpdateType.CallbackQuery when update.CallbackQuery != null:
+                            await OnCallBackQuery(update.CallbackQuery);
+                            break;
+                    }
                 }
-                case UpdateType.CallbackQuery:
+                catch (Exception ex)
                 {
-                    if (update.CallbackQuery != null)
-                        await OnCallBackQuery(update.CallbackQuery);
-                    break;
+                    _logger.LogError(ex, "Ошибка при обработке Update {UpdateId}", update.Id);
                 }
-            }
-        }
+            });
+
+            await Task.CompletedTask;
+        } 
         //async Task OnJoinGroupChat(Update update)
         //{
 
@@ -108,6 +115,14 @@ public class Worker : BackgroundService
 
         //}
         async Task OnCallBackQuery(CallbackQuery query) {
+            try
+            {
+                await bot.AnswerCallbackQuery(query.Id, cancellationToken: default);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Не удалось быстро ответить на CallbackQuery");
+            }
             _logger.LogInformation($"{query.From.ToString()}, {query.Message}, {query.Data}");
             if (string.IsNullOrEmpty(query.Data)) throw new ArgumentException("Данные были пустые или null", nameof(query.Data));
             var data = query.Data;
@@ -125,7 +140,6 @@ public class Worker : BackgroundService
                 }
                 else if (players.Count > 15)
                 {
-
                     await bot.AnswerCallbackQuery(
                         callbackQueryId: query.Id,
                         text: "Много игроков",
@@ -218,11 +232,15 @@ public class Worker : BackgroundService
                     }
                     else
                         pollSelection.Add(targetId, 1);
-                    await bot.AnswerCallbackQuery(
-                        callbackQueryId: query.Id,
-                        text: $"Вы проголосовали",
-                        cancellationToken: default
-                    );
+                    try
+                    {
+                        await bot.AnswerCallbackQuery(
+                            callbackQueryId: query.Id,
+                            text: $"Вы проголосовали",
+                            cancellationToken: default
+                        );
+                    }
+                    catch { }
                 }
             }
             else if (data.StartsWith("heal_"))
@@ -267,9 +285,8 @@ public class Worker : BackgroundService
                 _ = long.TryParse(data.Replace("kill_", ""), out long targetId);
                 if (pollSelection.TryGetValue(targetId, out int currentVotes))
                 {
-                    if (currentVotes == players.Count)
+                    if (currentVotes == game.GetListForMafia().Count)
                     {
-                        game.MafiaWalks(targetId);
                         _timerService.StopTimer(targetId);
                     }
                     pollSelection[targetId] = currentVotes + 1;
@@ -294,24 +311,6 @@ public class Worker : BackgroundService
         {
             _logger.LogInformation($"Exception: {exception}, source: {source}");
         }
-        async Task<Message> SendMessage(ChatId chatId, string text)
-        {
-            return await bot.SendMessage(
-                chatId: chatId,
-                text: text,
-                cancellationToken: default
-                );
-        }
-        async Task<Message> SendMessageWithKeyboard(ChatId chatId, string text, ReplyMarkup inlineKeyboard)
-        {
-            return await bot.SendMessage(
-                chatId: chatId,
-                text: text,
-                replyMarkup: inlineKeyboard,
-                cancellationToken: default
-                );
-        }
-
         async Task GameStart(string chatId)
         {
             var civillianButtons = new List<InlineKeyboardButton>();
@@ -384,13 +383,14 @@ public class Worker : BackgroundService
                             );
                         }
                     }
+                    await _timerService.StartTimer(TimeSpan.FromSeconds(15));
                     await bot.SendMessage(
                         chatId: chatId,
                         text: "Наступил день",
                         cancellationToken: default
                     );
-                    await _timerService.StartTimer(TimeSpan.FromSeconds(15));
                     roundNumber++;
+                    await Task.Delay(3000);
                 }
                 else
                 {
@@ -481,6 +481,11 @@ public class Worker : BackgroundService
                 civillianButtons.Clear();
                 doctorButtons.Clear();
             }
+            await bot.SendMessage(
+            chatId: chatId,
+            text: game.CheckForCivilianWin() ? "Мирные победили" : "Мафия победила",
+            cancellationToken: default
+            );
         }
         long calcPollResults(long? @targetId)
         {
