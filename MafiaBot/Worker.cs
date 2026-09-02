@@ -171,7 +171,17 @@ public class Worker : BackgroundService
                     cancellationToken: default
                 );
                 game = new Models.Game(players.Select(x => x.Id).ToList());
-                    await GameStart(chatId); 
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await GameStart(chatId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Ошибка в игровом цикле");
+                    }
+                });
                 }
                 catch{ return; }
             }
