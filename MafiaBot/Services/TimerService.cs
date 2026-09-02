@@ -24,7 +24,7 @@ public class TimerService
         }
     }
 
-    public void StopTimer(long choice)
+    public void StopTimer(long? choice)
     {
         _logger.LogInformation($"Timer stopped");
         _completionSource.TrySetResult(choice);
